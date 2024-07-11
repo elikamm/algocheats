@@ -14,12 +14,22 @@
                 top: 40px; left: 0;
                 width: 100%; height: calc(100% - 40px);
             }
+
+            #warning {
+                position: absolute;
+                top: calc(40% - 30px); left: 0;
+                width: 100%; line-height: 30px;
+                font-family: monospace;
+                font-size: 20px;
+                text-align: center;
+            }
         </style>
     </head>
 
     <body>
         <input type="text" id="input" placeholder="Baum eingeben..."/>
         <canvas id="display"></canvas>
+        <noscript id="warning">JavaScript ist deaktiviert!<br>Klicke auf "Trust HTML".</noscript>
 
         <script>
             let input = document.getElementById("input"),
