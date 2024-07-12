@@ -1,64 +1,110 @@
+<!DOCTYPE html>
 <html>
     <head>
-        <title>treeviz</title>
-
+        <title>AVL-Baum Visualisierung</title>
         <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+            }
+            #container {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+            #input-container {
+                display: flex;
+                padding: 10px;
+            }
             #input {
-                position: absolute;
-                top: 0; left: 0;
-                width: 100%; height: 40px;
+                flex-grow: 1;
+                height: 30px;
+                padding: 5px;
+                margin-right: 10px;
             }
-
+            #balanceButton {
+                height: 40px;
+                padding: 5px 10px;
+                font-size: 16px;
+                cursor: pointer;
+            }
             #display {
-                position: absolute;
-                top: 40px; left: 0;
-                width: 100%; height: calc(100% - 40px);
+                flex-grow: 1;
             }
-
+            #explanation {
+                padding: 10px;
+                background-color: #f0f0f0;
+                border-top: 1px solid #ccc;
+            }
             #warning {
                 position: absolute;
-                top: calc(40% - 30px); left: 0;
-                width: 100%; line-height: 30px;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
                 font-family: monospace;
                 font-size: 20px;
+            }
+            #result {
+                padding: 10px;
+                background-color: #e0e0e0;
+                border-top: 1px solid #ccc;
                 text-align: center;
+                overflow: auto;
+                height: 30%; /* Vergrößert den Platz für das Resultat */
+                font-size: 20px; /* Vergrößert die Schriftgröße */
             }
         </style>
     </head>
-
     <body>
-        <input type="text" id="input" placeholder="Baum eingeben..."/>
-        <canvas id="display"></canvas>
+        <div id="container">
+            <div id="input-container">
+                <input type="text" id="input" placeholder="Baum eingeben (z.B. (((1),2,(3)),4,((5),6,(7))))"/>
+                <button id="balanceButton">Baum balancieren</button>
+            </div>
+            <canvas id="display"></canvas>
+            <div id="result">
+                <h3>Balancierter Baum:</h3>
+                <pre id="outputTree"></pre>
+            </div>
+            <div id="explanation">
+                <h3>Erklärung:</h3>
+                <p>Jeder Knoten wird wie folgt dargestellt:</p>
+                <pre>
+  Wert
+Höhe|Balancefaktor
+                </pre>
+                           </div>
+        </div>
         <noscript id="warning">JavaScript ist deaktiviert!<br>Klicke auf "Trust HTML".</noscript>
-
         <script>
             let input = document.getElementById("input"),
+                balanceButton = document.getElementById("balanceButton"),
                 display = document.getElementById("display"),
+                outputTree = document.getElementById("outputTree"),
                 ctx = display.getContext("2d"),
                 tree = [];
 
             input.addEventListener("input", readInput);
-
+            balanceButton.addEventListener("click", balanceTree);
             window.addEventListener("resize", resizeDisplay);
             resizeDisplay();
 
             function resizeDisplay() {
                 display.width = display.clientWidth;
                 display.height = display.clientHeight;
-
                 renderDisplay();
             }
 
             function readInput() {
                 try {
                     let i = input.value.replaceAll('(', '[').replaceAll(')', ']').replaceAll('-', "undefined");
-
                     eval(`tree=${i};`);
                 }
                 catch(_) {
                     tree = [];
                 }
-
                 renderDisplay();
             }
 
@@ -67,42 +113,113 @@
                 drawTree(tree, display.width / 2, display.height / 10, display.width / 2);
             }
 
+            function calculateHeight(node) {
+                if (!node || node.length === 0) return -1;
+                if (node.length === 1) return 0;
+                return 1 + Math.max(calculateHeight(node[0]), calculateHeight(node[2]));
+            }
+
+            function calculateBalanceFactor(node) {
+                if (!node || node.length !== 3) return 0;
+                return calculateHeight(node[0]) - calculateHeight(node[2]);
+            }
 
             function drawTree(part, x, y, width) {
                 ctx.textBaseline = "middle";
                 ctx.textAlign = "center";
-                ctx.font = "20px monospace";
+                ctx.font = "12px monospace";
                 ctx.strokeStyle = "#c0c0c0";
-                ctx.lineWidth = 2;
-
+                ctx.lineWidth = 1;
                 if (
                     part.length == 3 &&
                     typeof part[0]==="object" && typeof part[1]==="number" && typeof part[2]==="object" &&
                     part[0].length > 0 && part[2].length > 0
                 ) {
+                    let newY = y + display.height / 15;
                     if (part[0][0] !== undefined) {
                         ctx.beginPath();
                         ctx.moveTo(x, y);
-                        ctx.lineTo(x - width / 2, y + display.height / 10);
+                        ctx.lineTo(x - width / 2, newY);
                         ctx.stroke();
-                        drawTree(part[0], x - width / 2, y + display.height / 10, width / 2);
+                        drawTree(part[0], x - width / 2, newY, width / 2);
                     }
                     if (part[2][0] !== undefined) {
                         ctx.beginPath();
                         ctx.moveTo(x, y);
-                        ctx.lineTo(x + width / 2, y + display.height / 10);
+                        ctx.lineTo(x + width / 2, newY);
                         ctx.stroke();
-                        drawTree(part[2], x + width / 2, y + display.height / 10, width / 2);
+                        drawTree(part[2], x + width / 2, newY, width / 2);
                     }
-
-                    ctx.fillText(part[1], x, y);
+                    let height = calculateHeight(part);
+                    let balanceFactor = calculateBalanceFactor(part);
+                    ctx.fillText(`${part[1]}`, x, y - 6);
+                    ctx.fillText(`${height}|${balanceFactor}`, x, y + 6);
                 }
                 else if (
                     part.length == 1 &&
                     typeof part[0]==="number"
                 ) {
-                    ctx.fillText(part[0], x, y);
+                    ctx.fillText(`${part[0]}`, x, y - 6);
+                    ctx.fillText(`0|0`, x, y + 6);
                 }
+            }
+
+            function balanceTree() {
+                if (tree.length === 0) return;
+                outputTree.textContent = "";
+                tree = balanceNode(tree);
+                renderDisplay();
+                outputTree.textContent += `Endgültiger balancierter Baum:\n${treeToString(tree).replaceAll("undefined", "-")}`;
+            }
+
+            function balanceNode(node) {
+                if (node.length !== 3) return node;
+                let left = node[0], value = node[1], right = node[2];
+
+                left = balanceNode(left);
+                right = balanceNode(right);
+
+                let balanceFactor = calculateBalanceFactor([left, value, right]);
+
+                if (balanceFactor > 1) {
+                    if (calculateBalanceFactor(left) < 0) {
+                        node[0] = leftRotate(left);
+                    }
+                    outputTree.textContent += `Rechtsrotation bei Knoten ${value}:\n${treeToString([node[0], value, node[2]]).replaceAll("undefined", "-")}\n\n`;
+                    return rightRotate([node[0], value, node[2]]);
+                }
+                if (balanceFactor < -1) {
+                    if (calculateBalanceFactor(right) > 0) {
+                        node[2] = rightRotate(right);
+                    }
+                    outputTree.textContent += `Linksrotation bei Knoten ${value}:\n${treeToString([node[0], value, node[2]]).replaceAll("undefined", "-")}\n\n`;
+                    return leftRotate([node[0], value, node[2]]);
+                }
+
+                node[0] = left;
+                node[2] = right;
+                return node;
+            }
+
+            function leftRotate(node) {
+                let newRoot = node[2];
+                node[2] = newRoot[0];
+                newRoot[0] = node;
+                return newRoot;
+            }
+
+            function rightRotate(node) {
+                let newRoot = node[0];
+                node[0] = newRoot[2];
+                newRoot[2] = node;
+                return newRoot;
+            }
+
+            function treeToString(node) {
+                if (node.length === 1) {
+                    return `(${node[0]})`;
+                }
+                return `(${treeToString(node[0])},${node[1]},${treeToString(node[2])})`;
             }
         </script>
     </body>
